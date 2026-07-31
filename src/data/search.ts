@@ -12,11 +12,34 @@ export async function searchStocks(keyword: string): Promise<SearchHit[]> {
   const kw = keyword.trim().toLowerCase();
   if (!kw) return [];
   const isDigit = /^\d+$/.test(kw);
-  const matches = STOCK_DICT.filter((item: DictStock) => {
+  const candidates = STOCK_DICT.filter((item: DictStock) => {
     if (isDigit) return item.code.includes(kw);
     return item.name.toLowerCase().includes(kw) || item.py.includes(kw);
-  }).slice(0, 40);
-  return matches.map((item) => ({ market: item.market, code: item.code, name: item.name }));
+  });
+  const scored = candidates
+    .map((item) => {
+      const nameLow = item.name.toLowerCase();
+      let score = 1;
+      if (isDigit) {
+        score = item.code === kw ? 100 : item.code.startsWith(kw) ? 60 : 10;
+      } else if (nameLow === kw) {
+        score = 100;
+      } else if (item.py === kw) {
+        score = 95;
+      } else if (nameLow.startsWith(kw)) {
+        score = 80;
+      } else if (item.py.startsWith(kw)) {
+        score = 70;
+      } else if (nameLow.includes(kw)) {
+        score = 30;
+      } else {
+        score = 20; // py.includes
+      }
+      return { item, score };
+    })
+    .sort((a, b) => b.score - a.score || a.item.code.localeCompare(b.item.code))
+    .slice(0, 40);
+  return scored.map(({ item }) => ({ market: item.market, code: item.code, name: item.name }));
 }
 
 // 把用户输入补全为完整的带市场前缀代码（如 600519 -> sh600519）。
