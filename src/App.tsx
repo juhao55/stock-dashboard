@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ProviderConfig, Quote, ScreenerCriteria, StrategyId } from './types';
 import { createProvider } from './data/provider';
-import { DEFAULT_CORS_PROXY } from './data/proxy';
 import { defaultCriteria, filterQuotes, strategies, uniqueSectors } from './utils/screener';
 import { nowText } from './utils/format';
 import { StatCards } from './components/StatCards';
@@ -16,19 +15,25 @@ const CONFIG_KEY = 'stock-dashboard-provider-config';
 const MODE_LABEL: Record<ProviderConfig['mode'], string> = {
   mock: '本地模拟行情',
   'tencent-public': '腾讯公开行情',
-  'sina-public': '新浪公开行情',
-  'eastmoney-public': '东方财富',
   'broker-http': '券商 HTTP 接口'
 };
 
 function loadConfig(): ProviderConfig {
   try {
     const raw = window.localStorage.getItem(CONFIG_KEY);
-    if (raw) return JSON.parse(raw) as ProviderConfig;
+    if (raw) {
+      const parsed = JSON.parse(raw) as ProviderConfig;
+      // 旧版本可能保存了已下线的数据源（新浪/东方财富），统一迁移回腾讯
+      const legacyMode = parsed.mode as string;
+      if (legacyMode === 'sina-public' || legacyMode === 'eastmoney-public') {
+        parsed.mode = 'tencent-public';
+      }
+      return parsed;
+    }
   } catch {
     // 忽略本地配置解析失败，回退到模拟行情
   }
-  return { mode: 'tencent-public', brokerBaseUrl: '', brokerToken: '', corsProxy: DEFAULT_CORS_PROXY };
+  return { mode: 'tencent-public', brokerBaseUrl: '', brokerToken: '' };
 }
 
 export default function App() {
@@ -176,10 +181,8 @@ export default function App() {
               value={config.mode}
               onChange={(event) => setConfig({ ...config, mode: event.target.value as ProviderConfig['mode'] })}
             >
-              <option value="mock">本地模拟行情</option>
               <option value="tencent-public">腾讯公开行情</option>
-              <option value="sina-public">新浪公开行情</option>
-              <option value="eastmoney-public">东方财富公开行情</option>
+              <option value="mock">本地模拟行情</option>
               <option value="broker-http">券商 HTTP 行情</option>
             </select>
           </label>
@@ -203,16 +206,6 @@ export default function App() {
               </label>
             </>
           ) : null}
-          {config.mode === 'sina-public' || config.mode === 'eastmoney-public' ? (
-            <label className="wide-input">
-              CORS 代理
-              <input
-                placeholder={DEFAULT_CORS_PROXY}
-                value={config.corsProxy ?? DEFAULT_CORS_PROXY}
-                onChange={(event) => setConfig({ ...config, corsProxy: event.target.value })}
-              />
-            </label>
-          ) : null}
           <label className="checkbox-label">
             <input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} />
             自动刷新
@@ -224,18 +217,18 @@ export default function App() {
       <div className="notice">
         <span className="source-badge">当前数据源：<strong>{MODE_LABEL[config.mode]}</strong></span>
         {listSource ? <span className="source-detail">列表实际取自：{listSource}</span> : null}
-        <span className="source-tip">腾讯列表/日K/分时均可浏览器直连；新浪/东方财富实时列表因跨域在浏览器中自动回退腾讯，K线/分时尽力直连（东方财富需代理）。最后更新：{lastUpdated}</span>
+        <span className="source-tip">腾讯列表 / 日K / 分时均可浏览器直连，为真实行情。最后更新：{lastUpdated}</span>
       </div>
       {error ? (
         <div className="error-box">
-          {error}。默认「腾讯公开行情」可稳定直连；若切换新浪/东方财富后报错，多因公共 CORS 代理不通或限时，已自动回退腾讯；也可在「数据源」切回腾讯或本地模拟。
+          {error}。默认「腾讯公开行情」可稳定直连；如报错多为网络波动，可稍后点「刷新行情」或切到「本地模拟行情」。
         </div>
       ) : null}
       {searchError ? <div className="error-box">{searchError}</div> : null}
 
       <main className="layout">
         <section className={`tab-panel panel-market ${mobileTab === 'market' ? 'active' : ''}`}>
-          <SearchBox corsProxy={config.corsProxy ?? DEFAULT_CORS_PROXY} onPick={handlePick} />
+          <SearchBox onPick={handlePick} />
           <QuoteTable
             quotes={combinedQuotes}
             selectedCode={selectedQuote?.code}

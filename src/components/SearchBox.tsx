@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { normalizeCode, searchStocks, type SearchHit } from '../data/search';
 
 interface SearchBoxProps {
-  corsProxy: string;
   onPick: (result: { code: string; name?: string }) => void;
 }
 
-export function SearchBox({ corsProxy, onPick }: SearchBoxProps) {
+export function SearchBox({ onPick }: SearchBoxProps) {
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle');
@@ -31,7 +30,7 @@ export function SearchBox({ corsProxy, onPick }: SearchBoxProps) {
     const timer = window.setTimeout(async () => {
       setStatus('loading');
       try {
-        const results = await searchStocks(keyword, corsProxy);
+        const results = await searchStocks(keyword);
         if (results.length === 0) {
           setHits([]);
           setStatus('empty');
@@ -43,9 +42,9 @@ export function SearchBox({ corsProxy, onPick }: SearchBoxProps) {
         setHits([]);
         setStatus('error');
       }
-    }, 350);
+    }, 250);
     return () => window.clearTimeout(timer);
-  }, [query, corsProxy, codeDirect]);
+  }, [query, codeDirect]);
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -106,11 +105,10 @@ export function SearchBox({ corsProxy, onPick }: SearchBoxProps) {
           ) : null}
 
           {status === 'loading' ? <div className="search-msg">搜索中…</div> : null}
-          {status === 'empty' ? <div className="search-msg">未找到匹配的股票，试试输入代码</div> : null}
+          {status === 'empty' ? <div className="search-msg">词典内未匹配到，可直接输入 6 位代码（如 600519）添加任意股票</div> : null}
           {status === 'error' ? (
             <div className="search-msg error">
-              名称搜索需要可用的 CORS 代理（在「数据源」里填一个代理地址）。<br />
-              更直接的方式：输入 6 位代码（如 600519）即可添加任意股票。
+              搜索失败，请重试；或直接输入 6 位代码（如 600519）添加任意股票。
             </div>
           ) : null}
 
