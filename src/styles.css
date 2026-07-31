@@ -10,9 +10,16 @@
   box-sizing: border-box;
 }
 
+html,
 body {
+  width: 100%;
   margin: 0;
-  min-width: 1280px;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
   min-height: 100vh;
   background: #f5f7fb;
 }
@@ -25,6 +32,7 @@ select {
 
 button {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app {
@@ -181,17 +189,24 @@ select:focus {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(760px, 1.35fr) minmax(520px, 1fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
 
-.left-column,
-.right-column {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
+.panel-market {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.panel-screener {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.panel-overview {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .panel {
@@ -224,6 +239,7 @@ select:focus {
   max-height: 430px;
   overflow: auto;
   border-top: 1px solid #edf1f7;
+  -webkit-overflow-scrolling: touch;
 }
 
 .result-wrap {
@@ -285,6 +301,7 @@ tbody tr.selected {
   color: #c3cad6;
   font-size: 18px;
   line-height: 1;
+  padding: 4px 6px;
 }
 
 .watch.active {
@@ -393,12 +410,200 @@ tbody tr.selected {
   text-align: center;
 }
 
-@media (max-width: 1500px) {
-  .form-grid {
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
+/* 底部 Tab 栏：默认桌面隐藏，手机端显示 */
+.tab-bar {
+  display: none;
+}
+
+/* ============ 移动端（≤859px） ============ */
+@media (max-width: 859px) {
+  .app {
+    padding: 12px;
+    padding-bottom: 88px; /* 给底部 Tab 栏留位 */
   }
 
+  .app-header {
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .app-header h1 {
+    font-size: 22px;
+  }
+
+  .header-actions {
+    width: 100%;
+    max-width: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .header-actions label,
+  .header-actions .primary,
+  .header-actions .checkbox-label {
+    width: 100%;
+  }
+
+  .wide-input input,
+  .header-actions input,
+  .header-actions select {
+    width: 100%;
+    height: 44px;
+  }
+
+  .checkbox-label {
+    justify-content: flex-start;
+  }
+
+  .primary {
+    height: 46px;
+    font-size: 16px;
+  }
+
+  /* 单栏布局 + Tab 切换 */
   .layout {
-    grid-template-columns: 1fr;
+    display: block;
+  }
+
+  .tab-panel {
+    display: none;
+  }
+
+  .tab-panel.active {
+    display: block;
+  }
+
+  .panel-market,
+  .panel-screener,
+  .panel-overview {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  /* 统计卡片两列 */
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card strong {
+    font-size: 20px;
+  }
+
+  /* 表格：精简列、缩小内边距、可横向滑动 */
+  .table-wrap {
+    max-height: none;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th,
+  td {
+    padding: 11px 10px;
+  }
+
+  tbody tr {
+    min-height: 44px;
+  }
+
+  .watch {
+    font-size: 20px;
+    padding: 6px 8px;
+  }
+
+  /* 行情表：手机保留 自选/代码/名称/价/涨跌/成交额，隐藏其余 */
+  .quote-panel th:nth-child(n + 7),
+  .quote-panel td:nth-child(n + 7) {
+    display: none;
+  }
+
+  /* 选股结果表：隐藏 量比/换手率/PE/股息率，保留代码/名称/价/涨跌/成交额/市值 */
+  .screener-panel th:nth-child(5),
+  .screener-panel td:nth-child(5),
+  .screener-panel th:nth-child(6),
+  .screener-panel td:nth-child(6),
+  .screener-panel th:nth-child(7),
+  .screener-panel td:nth-child(7),
+  .screener-panel th:nth-child(8),
+  .screener-panel td:nth-child(8) {
+    display: none;
+  }
+
+  /* 选股表单两列 */
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0 14px 12px;
+  }
+
+  .form-grid label {
+    min-width: 0;
+  }
+
+  .form-grid input,
+  .form-grid select {
+    height: 42px;
+  }
+
+  .panel-title {
+    padding: 14px 14px 8px;
+  }
+
+  .strategy-row {
+    padding: 0 14px 10px;
+  }
+
+  .sector-grid {
+    padding: 0 6px;
+  }
+
+  /* 底部 Tab 栏 */
+  .tab-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    background: #ffffff;
+    border-top: 1px solid #e3e9f4;
+    box-shadow: 0 -6px 20px rgba(32, 56, 117, 0.08);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 56px;
+    border: 0;
+    background: transparent;
+    color: #667085;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .tab-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .tab.active {
+    color: #3457d5;
+  }
+
+  .tab.active .tab-icon {
+    transform: translateY(-1px);
   }
 }

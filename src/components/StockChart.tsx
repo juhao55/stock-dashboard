@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { EChartsOption } from 'echarts';
 import { IntradayPoint, KlinePoint, Quote, QuoteProvider } from '../types';
 import { formatPercent, formatPrice } from '../utils/format';
+import { useMediaQuery } from '../utils/useMediaQuery';
 import { EChart } from './EChart';
 
 interface StockChartProps {
@@ -13,6 +14,9 @@ export function StockChart({ provider, quote }: StockChartProps) {
   const [kline, setKline] = useState<KlinePoint[]>([]);
   const [intraday, setIntraday] = useState<IntradayPoint[]>([]);
   const [error, setError] = useState('');
+  const narrow = useMediaQuery('(max-width: 859px)');
+  const intradayHeight = narrow ? 190 : 250;
+  const klineHeight = narrow ? 250 : 330;
 
   useEffect(() => {
     let alive = true;
@@ -115,8 +119,8 @@ export function StockChart({ provider, quote }: StockChartProps) {
         <span className="timestamp">{quote.updatedAt}</span>
       </div>
       {error ? <div className="error-box">{error}</div> : null}
-      <EChart option={intradayOption} height={250} />
-      <EChart option={klineOption} height={330} />
+      <EChart option={intradayOption} height={intradayHeight} />
+      <EChart option={klineOption} height={klineHeight} />
     </section>
   );
 }

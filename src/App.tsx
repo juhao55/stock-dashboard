@@ -33,6 +33,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState('--');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [mobileTab, setMobileTab] = useState<'market' | 'screener' | 'overview'>('market');
 
   const provider = useMemo(() => createProvider(config), [config]);
   const sectors = useMemo(() => uniqueSectors(quotes), [quotes]);
@@ -139,10 +140,8 @@ export default function App() {
       </div>
       {error ? <div className="error-box">{error}。请检查网络、券商接口地址、Token、跨域配置，或切回本地模拟行情。</div> : null}
 
-      <StatCards quotes={quotes} />
-
       <main className="layout">
-        <div className="left-column">
+        <section className={`tab-panel panel-market ${mobileTab === 'market' ? 'active' : ''}`}>
           <QuoteTable
             quotes={quotes}
             selectedCode={selectedQuote?.code}
@@ -150,6 +149,10 @@ export default function App() {
             onSelect={(quote) => setSelectedCode(quote.code)}
             onToggleWatch={toggleWatch}
           />
+          <StockChart provider={provider} quote={selectedQuote} />
+        </section>
+
+        <section className={`tab-panel panel-screener ${mobileTab === 'screener' ? 'active' : ''}`}>
           <ScreenerPanel
             criteria={criteria}
             sectors={sectors}
@@ -161,15 +164,43 @@ export default function App() {
             onRun={runScreener}
             onSelect={(quote) => setSelectedCode(quote.code)}
           />
-        </div>
-        <div className="right-column">
-          <SectorChart quotes={quotes} />
           <div className="strategy-note">
             当前策略：<strong>{activeStrategy.name}</strong>（{activeStrategy.description}）
           </div>
-          <StockChart provider={provider} quote={selectedQuote} />
-        </div>
+        </section>
+
+        <section className={`tab-panel panel-overview ${mobileTab === 'overview' ? 'active' : ''}`}>
+          <StatCards quotes={quotes} />
+          <SectorChart quotes={quotes} />
+        </section>
       </main>
+
+      <nav className="tab-bar">
+        <button
+          type="button"
+          className={`tab ${mobileTab === 'market' ? 'active' : ''}`}
+          onClick={() => setMobileTab('market')}
+        >
+          <span className="tab-icon">📈</span>
+          <span>行情</span>
+        </button>
+        <button
+          type="button"
+          className={`tab ${mobileTab === 'screener' ? 'active' : ''}`}
+          onClick={() => setMobileTab('screener')}
+        >
+          <span className="tab-icon">🔍</span>
+          <span>选股</span>
+        </button>
+        <button
+          type="button"
+          className={`tab ${mobileTab === 'overview' ? 'active' : ''}`}
+          onClick={() => setMobileTab('overview')}
+        >
+          <span className="tab-icon">📊</span>
+          <span>概览</span>
+        </button>
+      </nav>
     </div>
   );
 }
