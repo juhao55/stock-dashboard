@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProviderConfig, Quote, ScreenerCriteria, StrategyId } from './types';
 import { createProvider } from './data/provider';
+import { DEFAULT_CORS_PROXY } from './data/proxy';
 import { defaultCriteria, filterQuotes, strategies, uniqueSectors } from './utils/screener';
 import { nowText } from './utils/format';
 import { StatCards } from './components/StatCards';
@@ -18,7 +19,7 @@ function loadConfig(): ProviderConfig {
   } catch {
     // 忽略本地配置解析失败，回退到模拟行情
   }
-  return { mode: 'mock', brokerBaseUrl: '', brokerToken: '' };
+  return { mode: 'mock', brokerBaseUrl: '', brokerToken: '', corsProxy: DEFAULT_CORS_PROXY };
 }
 
 export default function App() {
@@ -104,6 +105,8 @@ export default function App() {
             >
               <option value="mock">本地模拟行情</option>
               <option value="tencent-public">腾讯公开行情</option>
+              <option value="sina-public">新浪公开行情</option>
+              <option value="eastmoney-public">东方财富公开行情</option>
               <option value="broker-http">券商 HTTP 行情</option>
             </select>
           </label>
@@ -127,6 +130,16 @@ export default function App() {
               </label>
             </>
           ) : null}
+          {config.mode === 'sina-public' || config.mode === 'eastmoney-public' ? (
+            <label className="wide-input">
+              CORS 代理
+              <input
+                placeholder={DEFAULT_CORS_PROXY}
+                value={config.corsProxy ?? DEFAULT_CORS_PROXY}
+                onChange={(event) => setConfig({ ...config, corsProxy: event.target.value })}
+              />
+            </label>
+          ) : null}
           <label className="checkbox-label">
             <input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} />
             自动刷新
@@ -136,9 +149,13 @@ export default function App() {
       </header>
 
       <div className="notice">
-        可选数据源：本地模拟样本、腾讯公开行情（qt.gtimg.cn / ifzq.gtimg.cn）、券商 HTTP 行情（/quotes、/kline、/intraday）。最后更新：{lastUpdated}
+        可选数据源：本地模拟、腾讯公开行情（直连）、新浪公开行情（K线/分时 JSONP 直连，实时快照走 CORS 代理）、东方财富公开行情（走 CORS 代理）、券商 HTTP 行情。最后更新：{lastUpdated}
       </div>
-      {error ? <div className="error-box">{error}。请检查网络、券商接口地址、Token、跨域配置，或切回本地模拟行情。</div> : null}
+      {error ? (
+        <div className="error-box">
+          {error}。腾讯可直连；新浪/东方财富需可用的 CORS 代理（新浪实时还需代理转发 Referer: finance.sina.com.cn）；也可切回本地模拟行情。
+        </div>
+      ) : null}
 
       <main className="layout">
         <section className={`tab-panel panel-market ${mobileTab === 'market' ? 'active' : ''}`}>

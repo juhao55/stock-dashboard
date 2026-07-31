@@ -42,9 +42,10 @@ export interface QuoteProvider {
 }
 
 export interface ProviderConfig {
-  mode: 'mock' | 'tencent-public' | 'broker-http';
+  mode: 'mock' | 'tencent-public' | 'sina-public' | 'eastmoney-public' | 'broker-http';
   brokerBaseUrl?: string;
   brokerToken?: string;
+  corsProxy?: string;
 }
 
 export interface ScreenerCriteria {

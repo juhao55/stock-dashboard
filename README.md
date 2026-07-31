@@ -11,8 +11,19 @@ React + TypeScript + ECharts 实现的单页股票看盘与选股工具，可静
 
 ## 数据源（顶部可切换）
 - 本地模拟行情（默认，保证可运行）
+- 腾讯公开行情（无需 Token，纯前端直连 `Access-Control-Allow-Origin: *`，公开行情仅演示用）
+- 新浪公开行情
+  - 日 K / 分时：官方 JSONP 接口，**浏览器可直连**
+  - 实时快照（`hq.sinajs.cn`）：该接口无 CORS 头且校验 `Referer`，需配置**会转发 `Referer: https://finance.sina.com.cn` 的 CORS 代理**
+- 东方财富公开行情
+  - 列表 / 日 K / 分时（`push2` / `push2his`）均无 CORS 头，需配置 **CORS 代理**后方可纯前端使用
 - 券商 HTTP 行情（需自备 /quotes、/kline、/intraday 接口 + Token）
-- 腾讯公开行情（无需 Token，纯前端直连，公开行情仅演示用）
+
+### 关于 CORS 代理
+新浪实时快照与东方财富都不返回 CORS 头，纯前端（如 GitHub Pages）直连会被浏览器拦截。
+界面切换新浪/东方财富后会出现「CORS 代理」输入框（默认 `https://api.allorigins.win/raw?url=`），
+可替换为自建代理。代理地址为前缀，目标 URL 会自动 `encodeURIComponent` 追加。
+公共代理可能不稳定，生产环境建议自建轻量代理（东方财富无需 Referer；新浪代理需转发 Referer）。
 
 ## 本地运行
 ```bash
