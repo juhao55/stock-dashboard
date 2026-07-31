@@ -19,6 +19,10 @@ function pickString(source: Record<string, unknown>, keys: string[], fallback = 
 }
 
 export class BrokerHttpProvider implements QuoteProvider {
+  lastListSource?: string;
+  lastKlineSource?: string;
+  lastIntradaySource?: string;
+
   constructor(
     private readonly baseUrl: string,
     private readonly token?: string
@@ -44,7 +48,22 @@ export class BrokerHttpProvider implements QuoteProvider {
       : Array.isArray((payload as { data?: unknown[] }).data)
         ? (payload as { data: unknown[] }).data
         : [];
+    this.lastListSource = '券商 HTTP 接口';
+    this.lastKlineSource = '券商 HTTP 接口';
+    this.lastIntradaySource = '券商 HTTP 接口';
     return rows.map((row) => this.normalizeQuote(row as Record<string, unknown>));
+  }
+
+  async getQuote(code: string): Promise<Quote | null> {
+    try {
+      const payload = await this.request<unknown>(`/quote?code=${encodeURIComponent(code)}`);
+      const row = (Array.isArray(payload) ? payload[0] : (payload as { data?: unknown }).data) as Record<string, unknown> | undefined;
+      if (!row) return null;
+      this.lastListSource = '券商 HTTP 接口';
+      return this.normalizeQuote(row);
+    } catch {
+      return null;
+    }
   }
 
   async getKline(code: string, limit = 80): Promise<KlinePoint[]> {

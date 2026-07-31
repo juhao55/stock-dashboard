@@ -45,10 +45,26 @@ function chunk<T>(rows: T[], size: number): T[][] {
 }
 
 export class TencentQuoteProvider implements QuoteProvider {
+  lastListSource?: string;
+  lastKlineSource?: string;
+  lastIntradaySource?: string;
+
   constructor(private readonly symbols: string[] = DEFAULT_SYMBOLS) {}
 
   async listQuotes(): Promise<Quote[]> {
-    const groups = chunk(this.symbols, 40);
+    const quotes = await this.fetchQuotes(this.symbols);
+    this.lastListSource = '腾讯公开行情（浏览器直连，真实行情）';
+    return quotes;
+  }
+
+  async getQuote(code: string): Promise<Quote | null> {
+    const quotes = await this.fetchQuotes([code]);
+    this.lastListSource = '腾讯公开行情（浏览器直连，真实行情）';
+    return quotes[0] ?? null;
+  }
+
+  private async fetchQuotes(symbols: string[]): Promise<Quote[]> {
+    const groups = chunk(symbols, 40);
     const payloads = await Promise.all(
       groups.map(async (group) => {
         try {
@@ -102,6 +118,7 @@ export class TencentQuoteProvider implements QuoteProvider {
     }>(`https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${encodeURIComponent(code)},day,,,${limit},qfq`);
     const node = payload.data?.[code];
     const rows = node?.qfqday ?? node?.day ?? [];
+    this.lastKlineSource = '腾讯公开行情（浏览器直连，真实行情）';
     return rows.map((row) => ({
       date: row[0] ?? '',
       open: toNumber(row[1]),
@@ -118,6 +135,7 @@ export class TencentQuoteProvider implements QuoteProvider {
     }>(`https://ifzq.gtimg.cn/appstock/app/minute/query?code=${encodeURIComponent(code)}`);
     const rows = payload.data?.[code]?.data?.data ?? [];
     let previousVolume = 0;
+    this.lastIntradaySource = '腾讯公开行情（浏览器直连，真实行情）';
 
     return rows.map((row) => {
       const [time = '', price = '0', cumulativeVolume = '0', cumulativeAmount = '0'] = row.split(' ');

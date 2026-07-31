@@ -14,6 +14,8 @@ export function StockChart({ provider, quote }: StockChartProps) {
   const [kline, setKline] = useState<KlinePoint[]>([]);
   const [intraday, setIntraday] = useState<IntradayPoint[]>([]);
   const [error, setError] = useState('');
+  const [klineSource, setKlineSource] = useState('');
+  const [intradaySource, setIntradaySource] = useState('');
   const narrow = useMediaQuery('(max-width: 859px)');
   const intradayHeight = narrow ? 190 : 250;
   const klineHeight = narrow ? 250 : 330;
@@ -23,6 +25,8 @@ export function StockChart({ provider, quote }: StockChartProps) {
     if (!quote) {
       setKline([]);
       setIntraday([]);
+      setKlineSource('');
+      setIntradaySource('');
       return undefined;
     }
     setError('');
@@ -31,6 +35,8 @@ export function StockChart({ provider, quote }: StockChartProps) {
         if (!alive) return;
         setKline(klineRows);
         setIntraday(intradayRows);
+        setKlineSource(provider.lastKlineSource ?? '');
+        setIntradaySource(provider.lastIntradaySource ?? '');
       })
       .catch((err: unknown) => {
         if (!alive) return;
@@ -119,6 +125,10 @@ export function StockChart({ provider, quote }: StockChartProps) {
         <span className="timestamp">{quote.updatedAt}</span>
       </div>
       {error ? <div className="error-box">{error}</div> : null}
+      <div className="chart-source">
+        <span>分时接口：{intradaySource || '—'}</span>
+        <span>日K接口：{klineSource || '—'}</span>
+      </div>
       <EChart option={intradayOption} height={intradayHeight} />
       <EChart option={klineOption} height={klineHeight} />
     </section>

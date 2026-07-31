@@ -410,6 +410,159 @@ tbody tr.selected {
   text-align: center;
 }
 
+/* 数据源标识 */
+.source-badge {
+  margin-right: 6px;
+}
+
+.source-badge strong,
+.notice strong {
+  color: #2743b0;
+}
+
+.source-detail {
+  margin-right: 10px;
+  color: #2743b0;
+  font-weight: 600;
+}
+
+.source-tip {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #667085;
+}
+
+/* 搜索框 */
+.search-box {
+  position: relative;
+  margin: 14px 0 0;
+  padding: 0 18px;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d5ddea;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 12px;
+  height: 44px;
+}
+
+.search-input-row:focus-within {
+  border-color: #4c6fff;
+  box-shadow: 0 0 0 3px rgba(76, 111, 255, 0.12);
+}
+
+.search-icon {
+  font-size: 16px;
+}
+
+.search-input {
+  flex: 1;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  padding: 0;
+}
+
+.search-clear {
+  border: 0;
+  background: transparent;
+  color: #98a2b3;
+  font-size: 14px;
+  padding: 4px 6px;
+}
+
+.search-panel {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 50px;
+  z-index: 30;
+  background: #fff;
+  border: 1px solid #e3e9f4;
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(32, 56, 117, 0.16);
+  overflow: hidden;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.search-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  background: #fff;
+  padding: 11px 14px;
+}
+
+.search-hit:last-child {
+  border-bottom: 0;
+}
+
+.search-hit:hover {
+  background: #f4f7ff;
+}
+
+.search-hit .hit-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: #17233d;
+}
+
+.search-hit .hit-code {
+  color: #667085;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+.search-hit .hit-sub {
+  font-size: 12px;
+  color: #98a2b3;
+}
+
+.search-hit.code-hit {
+  background: #f4f7ff;
+}
+
+.search-msg {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #667085;
+  line-height: 1.5;
+}
+
+.search-msg.error {
+  color: #b42318;
+}
+
+/* 图表数据来源 */
+.chart-source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 0 18px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #667085;
+}
+
+.chart-source span {
+  background: #f0f4ff;
+  border: 1px solid #dbe6ff;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
 /* 底部 Tab 栏：默认桌面隐藏，手机端显示 */
 .tab-bar {
   display: none;
@@ -559,6 +712,20 @@ tbody tr.selected {
 
   .strategy-row {
     padding: 0 14px 10px;
+  }
+
+  /* 搜索框移动端铺满 */
+  .search-box {
+    padding: 0 14px;
+  }
+
+  .search-panel {
+    left: 14px;
+    right: 14px;
+  }
+
+  .search-input-row {
+    height: 48px;
   }
 
   .sector-grid {

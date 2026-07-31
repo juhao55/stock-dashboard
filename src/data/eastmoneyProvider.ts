@@ -42,6 +42,10 @@ async function fetchJson<T>(url: string): Promise<T> {
 const LIST_FIELDS = 'f12,f13,f14,f2,f3,f4,f6,f7,f9,f10,f15,f16,f17,f18,f20,f21,f23';
 
 export class EastMoneyQuoteProvider implements QuoteProvider {
+  lastListSource?: string;
+  lastKlineSource?: string;
+  lastIntradaySource?: string;
+
   constructor(private readonly symbols: string[] = DEFAULT_SYMBOLS, private readonly proxy = '') {}
 
   async listQuotes(): Promise<Quote[]> {
@@ -96,10 +100,52 @@ export class EastMoneyQuoteProvider implements QuoteProvider {
     });
 
     if (quotes.length === 0) throw new Error('东方财富未返回可用股票');
+    this.lastListSource = '东方财富（经 CORS 代理）';
     return quotes.sort((a, b) => b.amount - a.amount);
     } catch {
       // 东方财富接口无 CORS 头，公共代理不通时回退腾讯直连，保证列表/选股可用。
-      return new TencentQuoteProvider(this.symbols).listQuotes();
+      const fallback = await new TencentQuoteProvider(this.symbols).listQuotes();
+      this.lastListSource = '腾讯公开行情（东方财富接口不可用，已自动回退）';
+      return fallback;
+    }
+  }
+
+  async getQuote(code: string): Promise<Quote | null> {
+    try {
+      const payload = await fetchJson<{ data?: { diff?: Record<string, unknown> } }>(
+        proxied(
+          `https://push2.eastmoney.com/api/qt/stock/get?secid=${toSecid(code)}&fields=${LIST_FIELDS}`,
+          this.proxy
+        )
+      );
+      const d = payload?.data?.diff;
+      if (!d) return null;
+      const last = toNumber(d.f2);
+      const prevClose = toNumber(d.f18);
+      const amount = toNumber(d.f6);
+      const marketCap = toNumber(d.f20);
+      return {
+        code,
+        name: String(d.f14 ?? code),
+        sector: 'A股',
+        last,
+        prevClose,
+        open: toNumber(d.f17, last),
+        high: toNumber(d.f15, last),
+        low: toNumber(d.f16, last),
+        changePct: toNumber(d.f3),
+        volume: last ? amount / (last * 100) : 0,
+        amount: amount / 10000,
+        turnoverRate: toNumber(d.f7),
+        volumeRatio: toNumber(d.f10),
+        pe: toNumber(d.f9),
+        pb: toNumber(d.f23),
+        marketCap: marketCap / 1e8,
+        dividendYield: 0,
+        updatedAt: new Date().toLocaleString('zh-CN', { hour12: false })
+      };
+    } catch {
+      return new TencentQuoteProvider([code]).getQuote(code);
     }
   }
 
@@ -108,18 +154,25 @@ export class EastMoneyQuoteProvider implements QuoteProvider {
       `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${toSecid(code)}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58&klt=101&fqt=1&end=20500101&lmt=${limit}`,
       this.proxy
     );
-    const payload = await fetchJson<{ data?: { klines?: string[] } }>(url);
-    return (payload.data?.klines ?? []).map((line) => {
-      const parts = line.split(',');
-      return {
-        date: parts[0] ?? '',
-        open: toNumber(parts[1]),
-        close: toNumber(parts[2]),
-        high: toNumber(parts[3]),
-        low: toNumber(parts[4]),
-        volume: toNumber(parts[5]) // 手
-      };
-    });
+    try {
+      const payload = await fetchJson<{ data?: { klines?: string[] } }>(url);
+      this.lastKlineSource = '东方财富日K（经 CORS 代理）';
+      return (payload.data?.klines ?? []).map((line) => {
+        const parts = line.split(',');
+        return {
+          date: parts[0] ?? '',
+          open: toNumber(parts[1]),
+          close: toNumber(parts[2]),
+          high: toNumber(parts[3]),
+          low: toNumber(parts[4]),
+          volume: toNumber(parts[5]) // 手
+        };
+      });
+    } catch {
+      const fallback = await new TencentQuoteProvider([code]).getKline(code, limit);
+      this.lastKlineSource = '腾讯公开行情（东方财富日K失败，已回退）';
+      return fallback;
+    }
   }
 
   async getIntraday(code: string): Promise<IntradayPoint[]> {
@@ -127,17 +180,24 @@ export class EastMoneyQuoteProvider implements QuoteProvider {
       `https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=${toSecid(code)}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&ndays=1`,
       this.proxy
     );
-    const payload = await fetchJson<{ data?: { trends?: string[] } }>(url);
-    return (payload.data?.trends ?? []).map((line) => {
-      const parts = line.split(',');
-      const fullTime = parts[0] ?? '';
-      const time = fullTime.split(' ')[1] ?? '';
-      return {
-        time: time.length >= 5 ? time.slice(0, 5) : time,
-        price: toNumber(parts[2]),
-        avgPrice: toNumber(parts[7]),
-        volume: toNumber(parts[5]) // 手
-      };
-    });
+    try {
+      const payload = await fetchJson<{ data?: { trends?: string[] } }>(url);
+      this.lastIntradaySource = '东方财富分时（经 CORS 代理）';
+      return (payload.data?.trends ?? []).map((line) => {
+        const parts = line.split(',');
+        const fullTime = parts[0] ?? '';
+        const time = fullTime.split(' ')[1] ?? '';
+        return {
+          time: time.length >= 5 ? time.slice(0, 5) : time,
+          price: toNumber(parts[2]),
+          avgPrice: toNumber(parts[7]),
+          volume: toNumber(parts[5]) // 手
+        };
+      });
+    } catch {
+      const fallback = await new TencentQuoteProvider([code]).getIntraday(code);
+      this.lastIntradaySource = '腾讯分时（东方财富分时失败，已回退）';
+      return fallback;
+    }
   }
 }

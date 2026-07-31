@@ -39,6 +39,12 @@ export interface QuoteProvider {
   listQuotes(): Promise<Quote[]>;
   getKline(code: string, limit?: number): Promise<KlinePoint[]>;
   getIntraday(code: string): Promise<IntradayPoint[]>;
+  // 按代码查询单只股票（供搜索后加入自选），查不到返回 null
+  getQuote(code: string): Promise<Quote | null>;
+  // 运行期实际生效的数据接口（用于界面如实展示"现在用的是哪个接口"）
+  lastListSource?: string;
+  lastKlineSource?: string;
+  lastIntradaySource?: string;
 }
 
 export interface ProviderConfig {

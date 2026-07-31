@@ -50,6 +50,10 @@ function buildUniverse(): SeedStock[] {
 }
 
 export class MockQuoteProvider implements QuoteProvider {
+  lastListSource?: string;
+  lastKlineSource?: string;
+  lastIntradaySource?: string;
+
   private quotes: Quote[];
 
   constructor() {
@@ -106,7 +110,42 @@ export class MockQuoteProvider implements QuoteProvider {
         updatedAt: nowText()
       };
     });
+    this.lastListSource = '本地模拟行情（非真实数据）';
+    this.lastKlineSource = '本地模拟行情（非真实数据）';
+    this.lastIntradaySource = '本地模拟行情（非真实数据）';
     return [...this.quotes];
+  }
+
+  async getQuote(code: string): Promise<Quote | null> {
+    const found = this.quotes.find((item) => item.code === code);
+    if (found) {
+      this.lastListSource = '本地模拟行情（非真实数据）';
+      return found;
+    }
+    // 搜索模式下为未知代码合成一个确定性模拟标的，保证可以加入并查看图表
+    const prevClose = 10 + (hashCode(code) % 1800) / 18;
+    const last = round(prevClose * (1 + ((hashCode(code + '-d') % 120) - 60) / 10000), 2);
+    this.lastListSource = '本地模拟行情（合成标的，非真实数据）';
+    return {
+      code,
+      name: `模拟${code.slice(-4)}`,
+      sector: '自选',
+      last,
+      prevClose,
+      open: round(prevClose * 0.999, 2),
+      high: round(Math.max(last, prevClose) * 1.02, 2),
+      low: round(Math.min(last, prevClose) * 0.98, 2),
+      changePct: round(((last - prevClose) / prevClose) * 100, 2),
+      volume: 10000,
+      amount: 10000,
+      turnoverRate: 1,
+      volumeRatio: 1,
+      pe: 12,
+      pb: 1.2,
+      marketCap: 500,
+      dividendYield: 1,
+      updatedAt: nowText()
+    };
   }
 
   async getKline(code: string, limit = 80): Promise<KlinePoint[]> {
