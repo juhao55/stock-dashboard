@@ -1,5 +1,6 @@
 import { IntradayPoint, KlinePoint, Quote, QuoteProvider } from '../types';
 import { proxied } from './proxy';
+import { TencentQuoteProvider } from './tencentProvider';
 
 const DEFAULT_SYMBOLS = [
   'sh600519', 'sh600036', 'sh601318', 'sh600030', 'sh601166', 'sh600276', 'sh600900', 'sh601888',
@@ -44,22 +45,27 @@ export class EastMoneyQuoteProvider implements QuoteProvider {
   constructor(private readonly symbols: string[] = DEFAULT_SYMBOLS, private readonly proxy = '') {}
 
   async listQuotes(): Promise<Quote[]> {
-    const groups = chunk(this.symbols.map(toSecid), 50);
-    const payloads = await Promise.all(
-      groups.map((group) =>
-        fetchJson<{ data?: { diff?: Record<string, number>[] } }>(
-          proxied(
-            `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=${LIST_FIELDS}&secids=${group.join(',')}`,
-            this.proxy
-          )
-        )
-      )
-    );
+    try {
+      const groups = chunk(this.symbols.map(toSecid), 50);
+      const payloads = await Promise.all(
+        groups.map(async (group) => {
+          try {
+            return await fetchJson<{ data?: { diff?: Record<string, number>[] } }>(
+              proxied(
+                `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=${LIST_FIELDS}&secids=${group.join(',')}`,
+                this.proxy
+              )
+            );
+          } catch {
+            return null;
+          }
+        })
+      );
 
-    const quotes: Quote[] = [];
-    payloads.forEach((payload) => {
-      const diff = payload.data?.diff ?? [];
-      diff.forEach((d) => {
+      const quotes: Quote[] = [];
+      payloads.forEach((payload) => {
+        const diff = payload?.data?.diff ?? [];
+        diff.forEach((d) => {
         const code = (d.f13 === 1 ? 'sh' : 'sz') + d.f12;
         const last = toNumber(d.f2);
         const prevClose = toNumber(d.f18);
@@ -89,8 +95,12 @@ export class EastMoneyQuoteProvider implements QuoteProvider {
       });
     });
 
-    if (quotes.length === 0) throw new Error('东方财富未返回可用股票（请检查 CORS 代理是否可用）');
+    if (quotes.length === 0) throw new Error('东方财富未返回可用股票');
     return quotes.sort((a, b) => b.amount - a.amount);
+    } catch {
+      // 东方财富接口无 CORS 头，公共代理不通时回退腾讯直连，保证列表/选股可用。
+      return new TencentQuoteProvider(this.symbols).listQuotes();
+    }
   }
 
   async getKline(code: string, limit = 120): Promise<KlinePoint[]> {

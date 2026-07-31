@@ -1,6 +1,7 @@
 import { IntradayPoint, KlinePoint, Quote, QuoteProvider } from '../types';
 import { sinaJsonp } from './jsonp';
 import { proxied } from './proxy';
+import { TencentQuoteProvider } from './tencentProvider';
 
 const DEFAULT_SYMBOLS = [
   'sh600519', 'sh600036', 'sh601318', 'sh600030', 'sh601166', 'sh600276', 'sh600900', 'sh601888',
@@ -40,48 +41,60 @@ export class SinaQuoteProvider implements QuoteProvider {
   constructor(private readonly symbols: string[] = DEFAULT_SYMBOLS, private readonly proxy = '') {}
 
   async listQuotes(): Promise<Quote[]> {
-    const groups = chunk(this.symbols, 50);
-    const payloads = await Promise.all(
-      groups.map((group) => fetchGbkText(proxied(`https://hq.sinajs.cn/list=${group.join(',')}`, this.proxy)))
-    );
-    const quotes: Quote[] = [];
+    try {
+      const groups = chunk(this.symbols, 50);
+      const payloads = await Promise.all(
+        groups.map(async (group) => {
+          try {
+            return await fetchGbkText(proxied(`https://hq.sinajs.cn/list=${group.join(',')}`, this.proxy));
+          } catch {
+            return '';
+          }
+        })
+      );
+      const quotes: Quote[] = [];
 
-    payloads.forEach((text) => {
-      const matches = text.matchAll(/var\s+hq_str_([a-z0-9]+)="([^"]*)"/gi);
-      for (const match of matches) {
-        const code = match[1].toLowerCase();
-        const fields = match[2].split(',');
-        if (fields.length < 30 || !fields[0]) continue;
-        const prevClose = toNumber(fields[2]);
-        const last = toNumber(fields[3], prevClose);
-        const changePct = prevClose ? ((last - prevClose) / prevClose) * 100 : 0;
-        quotes.push({
-          code,
-          name: fields[0] || code,
-          sector: 'A股',
-          last,
-          prevClose,
-          open: toNumber(fields[1], last),
-          high: toNumber(fields[4], last),
-          low: toNumber(fields[5], last),
-          changePct,
-          volume: toNumber(fields[8]) / 100,
-          amount: toNumber(fields[9]) / 10000,
-          turnoverRate: 0,
-          volumeRatio: 1,
-          pe: 0,
-          pb: 0,
-          marketCap: 0,
-          dividendYield: 0,
-          updatedAt: `${fields[30] ?? ''} ${fields[31] ?? ''}`.trim()
-        });
+      payloads.forEach((text) => {
+        const matches = text.matchAll(/var\s+hq_str_([a-z0-9]+)="([^"]*)"/gi);
+        for (const match of matches) {
+          const code = match[1].toLowerCase();
+          const fields = match[2].split(',');
+          if (fields.length < 30 || !fields[0]) continue;
+          const prevClose = toNumber(fields[2]);
+          const last = toNumber(fields[3], prevClose);
+          const changePct = prevClose ? ((last - prevClose) / prevClose) * 100 : 0;
+          quotes.push({
+            code,
+            name: fields[0] || code,
+            sector: 'A股',
+            last,
+            prevClose,
+            open: toNumber(fields[1], last),
+            high: toNumber(fields[4], last),
+            low: toNumber(fields[5], last),
+            changePct,
+            volume: toNumber(fields[8]) / 100,
+            amount: toNumber(fields[9]) / 10000,
+            turnoverRate: 0,
+            volumeRatio: 1,
+            pe: 0,
+            pb: 0,
+            marketCap: 0,
+            dividendYield: 0,
+            updatedAt: `${fields[30] ?? ''} ${fields[31] ?? ''}`.trim()
+          });
+        }
+      });
+
+      if (quotes.length === 0) {
+        throw new Error('新浪实时未返回数据');
       }
-    });
-
-    if (quotes.length === 0) {
-      throw new Error('新浪行情未返回可用股票（若使用代理，请确认代理会转发 Referer: finance.sina.com.cn）');
+      return quotes.sort((a, b) => b.amount - a.amount);
+    } catch {
+      // 新浪实时接口要求转发 Referer: finance.sina.com.cn，纯前端（公共代理）几乎无法获取，
+      // 因此回退到腾讯公开行情直连，保证列表/选股始终可用。K线/分时仍走新浪 JSONP 直连。
+      return new TencentQuoteProvider(this.symbols).listQuotes();
     }
-    return quotes.sort((a, b) => b.amount - a.amount);
   }
 
   // 新浪日K / 分时 均通过 JSONP 接口（CN_MarketData.getKLineData）获取，可浏览器直连。

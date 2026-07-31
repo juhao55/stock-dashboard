@@ -49,7 +49,15 @@ export class TencentQuoteProvider implements QuoteProvider {
 
   async listQuotes(): Promise<Quote[]> {
     const groups = chunk(this.symbols, 40);
-    const payloads = await Promise.all(groups.map((group) => fetchGbkText(`https://qt.gtimg.cn/q=${group.join(',')}`)));
+    const payloads = await Promise.all(
+      groups.map(async (group) => {
+        try {
+          return await fetchGbkText(`https://qt.gtimg.cn/q=${group.join(',')}`);
+        } catch {
+          return '';
+        }
+      })
+    );
     const quotes: Quote[] = [];
 
     payloads.forEach((text) => {

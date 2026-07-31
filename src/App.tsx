@@ -19,7 +19,7 @@ function loadConfig(): ProviderConfig {
   } catch {
     // 忽略本地配置解析失败，回退到模拟行情
   }
-  return { mode: 'mock', brokerBaseUrl: '', brokerToken: '', corsProxy: DEFAULT_CORS_PROXY };
+  return { mode: 'tencent-public', brokerBaseUrl: '', brokerToken: '', corsProxy: DEFAULT_CORS_PROXY };
 }
 
 export default function App() {
@@ -149,11 +149,11 @@ export default function App() {
       </header>
 
       <div className="notice">
-        可选数据源：本地模拟、腾讯公开行情（直连）、新浪公开行情（K线/分时 JSONP 直连，实时快照走 CORS 代理）、东方财富公开行情（走 CORS 代理）、券商 HTTP 行情。最后更新：{lastUpdated}
+        默认数据源为「腾讯公开行情」（列表/日K/分时均可浏览器直连，无需代理）。新浪/东方财富实时列表走 CORS 代理，若代理不通会自动回退腾讯；K线/分时：新浪走 JSONP 直连、东方财富走代理。最后更新：{lastUpdated}
       </div>
       {error ? (
         <div className="error-box">
-          {error}。腾讯可直连；新浪/东方财富需可用的 CORS 代理（新浪实时还需代理转发 Referer: finance.sina.com.cn）；也可切回本地模拟行情。
+          {error}。默认「腾讯公开行情」可稳定直连；若切换新浪/东方财富后报错，多因公共 CORS 代理不通或限时，已自动回退腾讯；也可在「数据源」切回腾讯或本地模拟。
         </div>
       ) : null}
 
